@@ -13,14 +13,43 @@ enum class Type{
 }
 class Element constructor(val singleEl: String, val priority: Int,val type: Type )
 
-fun calculate(expression:String){
+fun calculate(expression:String):Float{
     val infixForm = expression.replace(" ","")//remove spaces
+    if (infixForm.isEmpty())//check string for emptiness
+        throw IllegalArgumentException("No expression")
     val parsedInf : List<Element> = parse(infixForm)//parsing an expression into its constituents
+    check(parsedInf)//parsing an expression into its constituents
     val postfix: List<Element> = transferToPost(parsedInf)//postfix translation
     for(element in postfix) print(element.singleEl+" ")//postfix output
-    println()
+    return count(postfix)
 }
 
+fun check(parsedinf:List<Element>){
+    for (i in 0..parsedinf.lastIndex){
+        when(parsedinf[i].priority){
+            0->{
+                if (parsedinf[i].type == Type.RightBracket && i != parsedinf.lastIndex && parsedinf[i+1].type == Type.LeftBracket)//)(
+                    throw IllegalArgumentException("Missing operator: ${parsedinf[i].singleEl}_${parsedinf[i+1].singleEl}")
+                if (parsedinf[i].type == Type.LeftBracket && i != parsedinf.lastIndex && parsedinf[i+1].type == Type.Operator)//(*5)
+                    throw IllegalArgumentException("Missing operand: ${parsedinf[i].singleEl}_${parsedinf[i+1].singleEl}")
+                if (parsedinf[i].type==Type.LeftBracket && i!=parsedinf.lastIndex && parsedinf[i+1].type==Type.RightBracket)//()
+                    throw IllegalArgumentException("Missing expression: ${parsedinf[i].singleEl}_${parsedinf[i+1].singleEl}")
+            }
+            1,2,3 ->{
+                if (i==parsedinf.lastIndex)//5*
+                    throw IllegalArgumentException("Missing operand: ${parsedinf[i].singleEl}_")
+                else if (i==0)//*5
+                    throw IllegalArgumentException("Missing operand: _${parsedinf[i].singleEl}")
+                else if (parsedinf[i+1].type != Type.Operand && parsedinf[i+1].type != Type.LeftBracket && parsedinf[i+1].type != Type.Unary)//(5+5*)
+                    throw IllegalArgumentException("Missing operand: ${parsedinf[i].singleEl}_${parsedinf[i+1].singleEl}")
+            }
+            4->{
+                if (parsedinf[i+1].type != Type.Operand && parsedinf[i+1].type != Type.LeftBracket)//
+                    throw IllegalArgumentException("Missing operand: ${parsedinf[i].singleEl}_${parsedinf[i+1].singleEl}")
+            }
+        }
+    }
+}
 
 fun parse(infixform:String):List<Element>{
     val parsedinf : MutableList<Element> = arrayListOf()
@@ -110,4 +139,31 @@ fun transferToPost(parsedinf: List<Element>):MutableList<Element>{
         stack.pop()
     }
     return postfix
+}
+
+fun count(postfix:List<Element>):Float{
+    val stack:Stack<Float> = Stack()
+    for(element in postfix){
+        if (element.type == Type.Operand)
+            stack.push(element.singleEl.toFloat())
+        else{
+            val digit1 = stack.peek()
+            stack.pop()
+            var digit2 = 0.0F
+            if (element.type !=Type.Unary) {
+                digit2 = stack.peek()
+                stack.pop()
+            }
+            when(element.singleEl){
+                "+" -> { stack.push(digit2+digit1)}
+                "-" -> { stack.push(digit2-digit1)}
+                "*" -> { stack.push(digit2*digit1)}
+                "/" -> { stack.push(digit2/digit1)}
+                "^" -> { stack.push(digit2.pow(digit1))}
+                "-&" ->{stack.push(digit1*-1)}
+                "+&"->{stack.push(digit1)}
+            }
+        }
+    }
+    return stack.peek()//the result is the remaining item on the stack
 }
