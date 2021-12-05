@@ -1,4 +1,4 @@
-import main.kotlin.calculate
+package main.kotlin
 
 fun main() {
     println("= " + calculate("12+ 3"))
